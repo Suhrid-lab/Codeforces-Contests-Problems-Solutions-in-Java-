@@ -1,0 +1,94 @@
+import java.io.*;
+import java.util.*;
+
+public class MonsterGame {
+    public static void main(String[] args) throws IOException {
+        BufferedReader br = new BufferedReader(new InputStreamReader(System.in));
+        PrintWriter pw = new PrintWriter(new BufferedWriter(new OutputStreamWriter(System.out)));
+        
+        int t = Integer.parseInt(br.readLine());
+        while (t-- > 0) {
+            int n = Integer.parseInt(br.readLine());
+            
+            StringTokenizer st = new StringTokenizer(br.readLine());
+            int[] a = new int[n];
+            for (int i = 0; i < n; i++) {
+                a[i] = Integer.parseInt(st.nextToken());
+            }
+            
+            st = new StringTokenizer(br.readLine());
+            int[] b = new int[n];
+            for (int i = 0; i < n; i++) {
+                b[i] = Integer.parseInt(st.nextToken());
+            }
+            
+            // Create prefix sums for b
+            long[] pref = new long[n + 1];
+            for (int i = 0; i < n; i++) {
+                pref[i + 1] = pref[i] + b[i];
+            }
+            
+            // Get all distinct a values and also a+1 values
+            TreeSet<Integer> candidates = new TreeSet<>();
+            for (int val : a) {
+                candidates.add(val);
+                if (val > 1) candidates.add(val - 1);
+            }
+            candidates.add(1); // Minimum possible difficulty
+            
+            // Convert to array for binary search
+            Integer[] candArr = candidates.toArray(new Integer[0]);
+            
+            // Sort a for counting swords with strength ≥ x
+            int[] sortedA = a.clone();
+            Arrays.sort(sortedA);
+            
+            long maxScore = 0;
+            
+            // Try each candidate difficulty
+            for (int x : candArr) {
+                // Count swords with strength ≥ x
+                int cnt = countGreaterOrEqual(sortedA, x);
+                
+                if (cnt == 0) continue;
+                
+                // Find maximum levels we can complete
+                int lo = 0, hi = n;
+                while (lo < hi) {
+                    int mid = (lo + hi + 1) / 2;
+                    if (pref[mid] <= cnt) {
+                        lo = mid;
+                    } else {
+                        hi = mid - 1;
+                    }
+                }
+                
+                int levels = lo;
+                maxScore = Math.max(maxScore, (long) x * levels);
+            }
+            
+            pw.println(maxScore);
+        }
+        
+        pw.flush();
+        pw.close();
+    }
+    
+    // Count number of elements ≥ x in sorted array
+    private static int countGreaterOrEqual(int[] arr, int x) {
+        int lo = 0, hi = arr.length - 1;
+        int pos = arr.length;
+        
+        while (lo <= hi) {
+            int mid = (lo + hi) / 2;
+            if (arr[mid] >= x) {
+                pos = mid;
+                hi = mid - 1;
+            } else {
+                lo = mid + 1;
+            }
+        }
+        
+        return arr.length - pos;
+    }
+}
