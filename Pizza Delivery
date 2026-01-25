@@ -1,0 +1,117 @@
+import java.io.*;
+import java.util.*;
+
+public class PizzaDelivery {
+    static class FastReader {
+        BufferedReader br;
+        StringTokenizer st;
+
+        FastReader() {
+            br = new BufferedReader(new InputStreamReader(System.in));
+        }
+
+        String next() {
+            while (st == null || !st.hasMoreElements()) {
+                try {
+                    st = new StringTokenizer(br.readLine());
+                } catch (IOException e) {
+                    e.printStackTrace();
+                }
+            }
+            return st.nextToken();
+        }
+
+        int nextInt() {
+            return Integer.parseInt(next());
+        }
+
+        long nextLong() {
+            return Long.parseLong(next());
+        }
+    }
+
+    public static void main(String[] args) {
+        FastReader in = new FastReader();
+        PrintWriter out = new PrintWriter(System.out);
+
+        int t = in.nextInt();
+        while (t-- > 0) {
+            int n = in.nextInt();
+            long Ax = in.nextLong();
+            long Ay = in.nextLong();
+            long Bx = in.nextLong();
+            long By = in.nextLong();
+
+            long[] xs = new long[n];
+            long[] ys = new long[n];
+            for (int i = 0; i < n; i++) xs[i] = in.nextLong();
+            for (int i = 0; i < n; i++) ys[i] = in.nextLong();
+
+            // Create houses and sort by x
+            House[] houses = new House[n];
+            for (int i = 0; i < n; i++) houses[i] = new House(xs[i], ys[i]);
+            Arrays.sort(houses, Comparator.comparingLong(h -> h.x));
+
+            // Group houses by same x
+            List<long[]> groups = new ArrayList<>(); // each group: [minY, maxY]
+            long currentX = -1;
+            long minY = 0, maxY = 0;
+            for (int i = 0; i < n; i++) {
+                long x = houses[i].x;
+                long y = houses[i].y;
+                if (i == 0 || x != currentX) {
+                    if (i != 0) groups.add(new long[]{minY, maxY});
+                    currentX = x;
+                    minY = maxY = y;
+                } else {
+                    if (y < minY) minY = y;
+                    if (y > maxY) maxY = y;
+                }
+            }
+            if (n > 0) groups.add(new long[]{minY, maxY});
+
+            long totalVertical;
+            if (groups.isEmpty()) {
+                totalVertical = Math.abs(Ay - By);
+            } else {
+                long L1 = groups.get(0)[0], R1 = groups.get(0)[1];
+                long costL = (R1 - L1) + Math.abs(Ay - R1);
+                long costR = (R1 - L1) + Math.abs(Ay - L1);
+                long prevL = L1, prevR = R1;
+
+                for (int i = 1; i < groups.size(); i++) {
+                    long L = groups.get(i)[0], R = groups.get(i)[1];
+                    long newCostL = (R - L) + Math.min(
+                            costL + Math.abs(prevL - R),
+                            costR + Math.abs(prevR - R)
+                    );
+                    long newCostR = (R - L) + Math.min(
+                            costL + Math.abs(prevL - L),
+                            costR + Math.abs(prevR - L)
+                    );
+                    costL = newCostL;
+                    costR = newCostR;
+                    prevL = L;
+                    prevR = R;
+                }
+
+                totalVertical = Math.min(
+                        costL + Math.abs(prevL - By),
+                        costR + Math.abs(prevR - By)
+                );
+            }
+
+            long totalTime = (Bx - Ax) + totalVertical;
+            out.println(totalTime);
+        }
+        out.close();
+    }
+
+    static class House {
+        long x, y;
+        House(long x, long y) {
+            this.x = x;
+            this.y = y;
+        }
+    }
+}
