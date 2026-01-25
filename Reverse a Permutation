@@ -1,0 +1,87 @@
+import java.io.*;
+import java.util.*;
+
+public class Main {
+    public static void main(String[] args) throws IOException {
+        BufferedReader br = new BufferedReader(new InputStreamReader(System.in));
+        PrintWriter pw = new PrintWriter(System.out);
+        int t = Integer.parseInt(br.readLine().trim());
+        while (t-- > 0) {
+            int n = Integer.parseInt(br.readLine().trim());
+            int[] p = new int[n + 1];
+            String[] tokens = br.readLine().trim().split(" ");
+            for (int i = 1; i <= n; i++) {
+                p[i] = Integer.parseInt(tokens[i - 1]);
+            }
+
+            if (n == 1) {
+                pw.println(p[1]);
+                continue;
+            }
+
+            // suffix maximum
+            int[] maxSuffix = new int[n + 2];
+            maxSuffix[n + 1] = 0;
+            for (int i = n; i >= 1; i--) {
+                maxSuffix[i] = Math.max(p[i], maxSuffix[i + 1]);
+            }
+
+            // first index where we can improve
+            int idx = 1;
+            while (idx <= n && p[idx] >= maxSuffix[idx]) {
+                idx++;
+            }
+
+            if (idx > n) {
+                // already maximum
+                for (int i = 1; i <= n; i++) {
+                    pw.print(p[i] + (i == n ? "\n" : " "));
+                }
+            } else {
+                int M = maxSuffix[idx];
+                // reverse of p
+                int[] q = new int[n + 1];
+                for (int k = 1; k <= n; k++) {
+                    q[k] = p[n + 1 - k];
+                }
+
+                int e = n + 1 - idx;                 // end index in q
+                int s = maxSuffixStart(q, e);       // start of max suffix in q[1..e]
+                int j = n + 1 - s;                   // corresponding position in p
+
+                // reverse segment [idx, j] in p
+                int l = idx, r = j;
+                while (l < r) {
+                    int tmp = p[l];
+                    p[l] = p[r];
+                    p[r] = tmp;
+                    l++;
+                    r--;
+                }
+
+                for (int i = 1; i <= n; i++) {
+                    pw.print(p[i] + (i == n ? "\n" : " "));
+                }
+            }
+        }
+        pw.flush();
+    }
+
+    // returns starting index (1‑based) of the lexicographically maximum suffix of a[1..end]
+    private static int maxSuffixStart(int[] a, int end) {
+        int i = 1, j = 2, k = 0;
+        while (j + k <= end) {
+            if (a[i + k] == a[j + k]) {
+                k++;
+            } else if (a[i + k] < a[j + k]) {
+                i = j;
+                j = i + 1;
+                k = 0;
+            } else {
+                j = j + k + 1;
+                k = 0;
+            }
+        }
+        return i;
+    }
+}
