@@ -1,0 +1,23 @@
+import java.io.*;
+
+public class Main {
+    public static void main(String[] args) throws IOException {
+        BufferedReader br = new BufferedReader(new InputStreamReader(System.in));
+        int t = Integer.parseInt(br.readLine());
+        StringBuilder out = new StringBuilder();
+        while (t-- > 0) {
+            int x = Integer.parseInt(br.readLine());
+            int cnt = 0;
+            for (int y = x + 1; y <= x + 90; ++y) {
+                int s = 0, tmp = y;
+                while (tmp > 0) {
+                    s += tmp % 10;
+                    tmp /= 10;
+                }
+                if (y - s == x) cnt++;
+            }
+            out.append(cnt).append('\n');
+        }
+        System.out.print(out);
+    }
+}
