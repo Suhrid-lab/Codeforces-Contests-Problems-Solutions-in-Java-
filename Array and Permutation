@@ -1,0 +1,62 @@
+import java.io.*;
+import java.util.*;
+
+public class Main {
+    public static void main(String[] args) throws IOException {
+        BufferedReader br = new BufferedReader(new InputStreamReader(System.in));
+        PrintWriter pw = new PrintWriter(System.out);
+        int t = Integer.parseInt(br.readLine());
+        while (t-- > 0) {
+            int n = Integer.parseInt(br.readLine());
+            int[] p = new int[n + 1];
+            int[] a = new int[n + 1];
+            StringTokenizer st = new StringTokenizer(br.readLine());
+            for (int i = 1; i <= n; i++) p[i] = Integer.parseInt(st.nextToken());
+            st = new StringTokenizer(br.readLine());
+            for (int i = 1; i <= n; i++) a[i] = Integer.parseInt(st.nextToken());
+
+            // original position of each value
+            int[] pos = new int[n + 1];
+            for (int i = 1; i <= n; i++) pos[p[i]] = i;
+
+            // first occurrence of each value in a
+            int[] first = new int[n + 1];
+            for (int i = 1; i <= n; i++) {
+                int x = a[i];
+                if (first[x] == 0) first[x] = i;
+            }
+
+            boolean ok = true;
+
+            // 1) each value must occupy a contiguous segment
+            for (int i = 1; i <= n; i++) {
+                if (i > 1 && a[i] != a[i - 1]) {
+                    if (first[a[i]] != i) {
+                        ok = false;
+                        break;
+                    }
+                }
+            }
+            if (!ok) {
+                pw.println("NO");
+                continue;
+            }
+
+            // 2) sources of consecutive blocks must be strictly increasing
+            int prev = 0;
+            for (int i = 1; i <= n; i++) {
+                if (i == 1 || a[i] != a[i - 1]) {
+                    int v = a[i];
+                    int cur = pos[v];
+                    if (cur <= prev) {
+                        ok = false;
+                        break;
+                    }
+                    prev = cur;
+                }
+            }
+            pw.println(ok ? "YES" : "NO");
+        }
+        pw.close();
+    }
+}
