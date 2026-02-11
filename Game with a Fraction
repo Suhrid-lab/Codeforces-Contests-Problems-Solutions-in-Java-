@@ -1,0 +1,19 @@
+import java.util.Scanner;
+
+public class Main {
+    public static void main(String[] args) {
+        Scanner sc = new Scanner(System.in);
+        int t = sc.nextInt();
+        while (t-- > 0) {
+            long p = sc.nextLong();
+            long q = sc.nextLong();
+            // Bob wins iff p+1 ≤ q ≤ floor(3p/2) , i.e. p+1 ≤ q and 2q ≤ 3p
+            if (p + 1 <= q && 2 * q <= 3 * p) {
+                System.out.println("Bob");
+            } else {
+                System.out.println("Alice");
+            }
+        }
+        sc.close();
+    }
+}
