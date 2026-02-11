@@ -1,0 +1,49 @@
+import java.io.*;
+import java.util.*;
+
+public class Main {
+    public static void main(String[] args) throws IOException {
+        BufferedReader br = new BufferedReader(new InputStreamReader(System.in));
+        PrintWriter pw = new PrintWriter(System.out);
+        int t = Integer.parseInt(br.readLine());
+
+        while (t-- > 0) {
+            int n = Integer.parseInt(br.readLine());
+            int[] a = new int[n];
+            StringTokenizer st = new StringTokenizer(br.readLine());
+            for (int i = 0; i < n; ++i) {
+                a[i] = Integer.parseInt(st.nextToken());
+            }
+
+            int B = (int) Math.sqrt(n);          // threshold
+            long ans = 0;
+
+            // ---------- case 1 : a[i] <= B ----------
+            for (int j = 0; j < n; ++j) {
+                long y = a[j];
+                for (int x = 1; x <= B; ++x) {
+                    long prod = (long) x * y;
+                    if (prod > j) break;        // further x only increase product
+                    int i = j - (int) prod;
+                    if (a[i] == x) ++ans;
+                }
+            }
+
+            // ---------- case 2 : a[i] > B ----------
+            for (int i = 0; i < n; ++i) {
+                int ai = a[i];
+                if (ai <= B) continue;
+                if (ai > n) continue;          // product would exceed n-1
+                int maxY = (n - 1 - i) / ai;   // largest y with j = i+ai*y <= n-1
+                for (int y = 1; y <= maxY; ++y) {
+                    int j = i + ai * y;
+                    if (a[j] == y) ++ans;
+                }
+            }
+
+            pw.println(ans);
+        }
+
+        pw.flush();
+    }
+}
