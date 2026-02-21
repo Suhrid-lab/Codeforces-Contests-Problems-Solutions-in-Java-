@@ -1,0 +1,28 @@
+import java.util.Scanner;
+
+public class Main {
+    public static void main(String[] args) {
+        Scanner sc = new Scanner(System.in);
+        int t = sc.nextInt();
+        while (t-- > 0) {
+            int n = sc.nextInt();
+            String s = sc.next();
+            int maxBlocks = 0;
+            // try every cyclic rotation
+            for (int i = 0; i < n; i++) {
+                String rotated = s.substring(i) + s.substring(0, i);
+                int blocks = 1;
+                for (int j = 1; j < n; j++) {
+                    if (rotated.charAt(j) != rotated.charAt(j - 1)) {
+                        blocks++;
+                    }
+                }
+                if (blocks > maxBlocks) {
+                    maxBlocks = blocks;
+                }
+            }
+            System.out.println(maxBlocks);
+        }
+        sc.close();
+    }
+}
