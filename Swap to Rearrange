@@ -1,0 +1,179 @@
+import java.util.*;
+import java.io.*;
+
+public class Main {
+
+    public static void main(String[] args) throws IOException {
+        BufferedReader br = new BufferedReader(new InputStreamReader(System.in));
+        int t = Integer.parseInt(br.readLine().trim());
+        StringBuilder sb = new StringBuilder();
+
+        while (t-- > 0) {
+            int n = Integer.parseInt(br.readLine().trim());
+            int[] a = readArr(br, n);
+            int[] b = readArr(br, n);
+
+            int[] freqA = new int[n + 1];
+            int[] freqB = new int[n + 1];
+            for (int x : a) freqA[x]++;
+            for (int x : b) freqB[x]++;
+
+            int[] rem = new int[n + 1];
+            boolean possible = true;
+            for (int v = 1; v <= n; v++) {
+                int total = freqA[v] + freqB[v];
+                if ((total & 1) != 0) { possible = false; break; }
+                rem[v] = total >> 1;
+            }
+
+            if (!possible) { sb.append("-1\n"); continue; }
+
+            for (int i = 0; i < n && possible; i++) {
+                if (a[i] == b[i]) {
+                    rem[a[i]]--;
+                    if (rem[a[i]] < 0) possible = false;
+                }
+            }
+
+            if (!possible) { sb.append("-1\n"); continue; }
+
+            int[] pA = new int[n];
+            int[] pB = new int[n];
+            int[] pIdx = new int[n];
+            int numFlex = 0;
+            for (int i = 0; i < n; i++) {
+                if (a[i] != b[i]) {
+                    pA[numFlex] = a[i];
+                    pB[numFlex] = b[i];
+                    pIdx[numFlex] = i + 1;
+                    numFlex++;
+                }
+            }
+
+            // Build adjacency linked list for multigraph
+            int[] adjHead = new int[n + 1]; Arrays.fill(adjHead, -1);
+            int[] adjNext = new int[2 * numFlex];
+            int[] adjPair = new int[2 * numFlex];
+            int[] adjOther = new int[2 * numFlex];
+            int edgeCnt = 0;
+            for (int p = 0; p < numFlex; p++) {
+                int u = pA[p], v = pB[p];
+                adjNext[edgeCnt] = adjHead[u]; adjHead[u] = edgeCnt;
+                adjPair[edgeCnt] = p; adjOther[edgeCnt] = v; edgeCnt++;
+                adjNext[edgeCnt] = adjHead[v]; adjHead[v] = edgeCnt;
+                adjPair[edgeCnt] = p; adjOther[edgeCnt] = u; edgeCnt++;
+            }
+
+            boolean[] processed = new boolean[numFlex];
+            boolean[] swapped = new boolean[numFlex];
+
+            // BFS propagation for forced-direction pairs
+            int[] queue = new int[numFlex];
+            boolean[] inQueue = new boolean[numFlex];
+            int qHead = 0, qTail = 0;
+
+            for (int p = 0; p < numFlex; p++) {
+                if (rem[pA[p]] == 0 || rem[pB[p]] == 0) {
+                    queue[qTail++] = p;
+                    inQueue[p] = true;
+                }
+            }
+
+            while (qHead < qTail && possible) {
+                int p = queue[qHead++];
+                if (processed[p]) continue;
+                int av = pA[p], bv = pB[p];
+                if (rem[av] == 0 && rem[bv] == 0) { possible = false; break; }
+                processed[p] = true;
+
+                int assigned;
+                if (rem[av] == 0) {
+                    swapped[p] = true; assigned = bv;
+                    rem[bv]--;
+                    if (rem[bv] < 0) { possible = false; break; }
+                } else {
+                    swapped[p] = false; assigned = av;
+                    rem[av]--;
+                    if (rem[av] < 0) { possible = false; break; }
+                }
+                if (rem[assigned] == 0) {
+                    for (int e = adjHead[assigned]; e != -1; e = adjNext[e]) {
+                        int q2 = adjPair[e];
+                        if (!processed[q2] && !inQueue[q2]) {
+                            queue[qTail++] = q2;
+                            inQueue[q2] = true;
+                        }
+                    }
+                }
+            }
+
+            if (!possible) { sb.append("-1\n"); continue; }
+
+            // DFS for remaining Eulerian pairs (deg[v] = 2*rem[v])
+            int[] ptr = Arrays.copyOf(adjHead, n + 1);
+            int[] dfsStack = new int[numFlex + 1];
+            int top = 0;
+
+            for (int p = 0; p < numFlex && possible; p++) {
+                if (!processed[p]) {
+                    dfsStack[top++] = pA[p];
+                    while (top > 0 && possible) {
+                        int v = dfsStack[top - 1];
+                        boolean found = false;
+                        while (ptr[v] != -1) {
+                            int e = ptr[v];
+                            ptr[v] = adjNext[e];
+                            int pi = adjPair[e], w = adjOther[e];
+                            if (processed[pi]) continue;
+                            processed[pi] = true;
+                            if (rem[v] > 0) {
+                                rem[v]--;
+                                swapped[pi] = (pA[pi] != v);
+                            } else {
+                                rem[w]--;
+                                if (rem[w] < 0) { possible = false; break; }
+                                swapped[pi] = (pA[pi] != w);
+                            }
+                            dfsStack[top++] = w;
+                            found = true;
+                            break;
+                        }
+                        if (!found) top--;
+                    }
+                }
+            }
+
+            if (possible) {
+                for (int v = 1; v <= n && possible; v++) {
+                    if (rem[v] != 0) possible = false;
+                }
+            }
+
+            if (!possible) {
+                sb.append("-1\n");
+            } else {
+                int swapCount = 0;
+                for (int p = 0; p < numFlex; p++) if (swapped[p]) swapCount++;
+                sb.append(swapCount).append('\n');
+                boolean first = true;
+                for (int p = 0; p < numFlex; p++) {
+                    if (swapped[p]) {
+                        if (!first) sb.append(' ');
+                        sb.append(pIdx[p]);
+                        first = false;
+                    }
+                }
+                sb.append('\n');
+            }
+        }
+
+        System.out.print(sb);
+    }
+
+    static int[] readArr(BufferedReader br, int n) throws IOException {
+        StringTokenizer st = new StringTokenizer(br.readLine());
+        int[] arr = new int[n];
+        for (int i = 0; i < n; i++) arr[i] = Integer.parseInt(st.nextToken());
+        return arr;
+    }
+}
