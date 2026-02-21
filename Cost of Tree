@@ -1,0 +1,221 @@
+import java.io.*;
+import java.util.*;
+
+public class Main {
+    static class Line {
+        long m, b; // y = m*x + b
+        Line(long m, long b) { this.m = m; this.b = b; }
+        long eval(long x) { return m * x + b; }
+    }
+
+    // check if line l2 is unnecessary because l1 and l3 make it redundant
+    static boolean isRedundant(Line l1, Line l2, Line l3) {
+        double x12 = (double)(l1.b - l2.b) / (l2.m - l1.m);
+        double x13 = (double)(l1.b - l3.b) / (l3.m - l1.m);
+        return x13 <= x12 + 1e-12;
+    }
+
+    // merge two sorted lists of lines (each already an envelope) and build new envelope
+    static List<Line> mergeAndBuild(List<Line> a, List<Line> b) {
+        int na = a.size(), nb = b.size();
+        List<Line> merged = new ArrayList<>(na + nb);
+        int i = 0, j = 0;
+        while (i < na && j < nb) {
+            Line la = a.get(i);
+            Line lb = b.get(j);
+            if (la.m < lb.m) {
+                merged.add(la);
+                i++;
+            } else if (la.m > lb.m) {
+                merged.add(lb);
+                j++;
+            } else {
+                // same slope: keep the one with larger intercept
+                if (la.b >= lb.b) merged.add(la);
+                else merged.add(lb);
+                i++; j++;
+            }
+        }
+        while (i < na) merged.add(a.get(i++));
+        while (j < nb) merged.add(b.get(j++));
+
+        // build upper envelope using stack
+        List<Line> stack = new ArrayList<>();
+        for (Line l : merged) {
+            while (stack.size() >= 2) {
+                Line l1 = stack.get(stack.size() - 2);
+                Line l2 = stack.get(stack.size() - 1);
+                if (isRedundant(l1, l2, l)) {
+                    stack.remove(stack.size() - 1);
+                } else {
+                    break;
+                }
+            }
+            stack.add(l);
+        }
+        return stack;
+    }
+
+    // query maximum value at x from the hull (list of lines sorted by slope)
+    static long queryMax(List<Line> hull, long x) {
+        int lo = 0, hi = hull.size() - 1;
+        while (lo < hi) {
+            int mid = (lo + hi) / 2;
+            long vmid = hull.get(mid).eval(x);
+            long vmid1 = hull.get(mid + 1).eval(x);
+            if (vmid < vmid1) {
+                lo = mid + 1;
+            } else {
+                hi = mid;
+            }
+        }
+        return hull.get(lo).eval(x);
+    }
+
+    public static void main(String[] args) throws IOException {
+        BufferedReader br = new BufferedReader(new InputStreamReader(System.in));
+        PrintWriter out = new PrintWriter(System.out);
+        int t = Integer.parseInt(br.readLine());
+        while (t-- > 0) {
+            int n = Integer.parseInt(br.readLine());
+            int[] a = new int[n + 1];
+            StringTokenizer st = new StringTokenizer(br.readLine());
+            for (int i = 1; i <= n; i++) {
+                a[i] = Integer.parseInt(st.nextToken());
+            }
+            List<Integer>[] g = new ArrayList[n + 1];
+            for (int i = 1; i <= n; i++) g[i] = new ArrayList<>();
+            for (int i = 0; i < n - 1; i++) {
+                st = new StringTokenizer(br.readLine());
+                int u = Integer.parseInt(st.nextToken());
+                int v = Integer.parseInt(st.nextToken());
+                g[u].add(v);
+                g[v].add(u);
+            }
+
+            // BFS from 1 to get parent and depth
+            int[] parent = new int[n + 1];
+            int[] depth = new int[n + 1];
+            Arrays.fill(parent, 0);
+            Queue<Integer> q = new ArrayDeque<>();
+            q.add(1);
+            parent[1] = -1;
+            depth[1] = 0;
+            while (!q.isEmpty()) {
+                int u = q.poll();
+                for (int v : g[u]) {
+                    if (v != parent[u]) {
+                        parent[v] = u;
+                        depth[v] = depth[u] + 1;
+                        q.add(v);
+                    }
+                }
+            }
+
+            // build children lists
+            List<Integer>[] children = new ArrayList[n + 1];
+            for (int i = 1; i <= n; i++) children[i] = new ArrayList<>();
+            for (int i = 2; i <= n; i++) {
+                children[parent[i]].add(i);
+            }
+
+            // arrays for subtree info
+            long[] total = new long[n + 1];
+            long[] weighted = new long[n + 1];
+            int[] mxDep = new int[n + 1];
+            long[] bestGain = new long[n + 1];
+            List<Line>[] hull = new ArrayList[n + 1];
+
+            // order nodes by decreasing depth (leaves first)
+            Integer[] order = new Integer[n];
+            for (int i = 0; i < n; i++) order[i] = i + 1;
+            Arrays.sort(order, (x, y) -> Integer.compare(depth[y], depth[x]));
+
+            // first pass: compute total, weighted, mxDep (children already processed because depth decreasing)
+            for (int u : order) {
+                total[u] = a[u];
+                weighted[u] = (long) a[u] * depth[u];
+                mxDep[u] = depth[u];
+                for (int v : children[u]) {
+                    total[u] += total[v];
+                    weighted[u] += weighted[v];
+                    mxDep[u] = Math.max(mxDep[u], mxDep[v]);
+                }
+            }
+
+            // second pass: compute bestGain and hulls
+            for (int u : order) {
+                // find two deepest children
+                int firstChild = -1;
+                int firstDepth = -1;
+                int secondDepth = -1;
+                long maxChildGain = 0;
+                for (int v : children[u]) {
+                    maxChildGain = Math.max(maxChildGain, bestGain[v]);
+                    int d = mxDep[v];
+                    if (d > firstDepth) {
+                        secondDepth = firstDepth;
+                        firstDepth = d;
+                        firstChild = v;
+                    } else if (d > secondDepth) {
+                        secondDepth = d;
+                    }
+                }
+
+                // cross-child candidates
+                long best = maxChildGain;
+                for (int v : children[u]) {
+                    int other = (v == firstChild) ? secondDepth : firstDepth;
+                    if (other != -1) {
+                        long x = other + 1;
+                        long val = queryMax(hull[v], x);
+                        if (val > best) best = val;
+                    }
+                }
+                bestGain[u] = Math.max(0, best);
+
+                // build hull for u
+                List<List<Line>> hulls = new ArrayList<>();
+                for (int v : children[u]) {
+                    hulls.add(hull[v]);
+                }
+                // own line
+                List<Line> own = new ArrayList<>();
+                own.add(new Line(total[u], -total[u] * depth[u]));
+                hulls.add(own);
+
+                // find largest hull
+                List<Line> largest = null;
+                int maxSize = -1;
+                for (List<Line> list : hulls) {
+                    if (list.size() > maxSize) {
+                        maxSize = list.size();
+                        largest = list;
+                    }
+                }
+                List<Line> cur = largest;
+                for (List<Line> list : hulls) {
+                    if (list != largest) {
+                        cur = mergeAndBuild(cur, list);
+                    }
+                }
+                hull[u] = cur;
+
+                // free child hulls (optional)
+                for (int v : children[u]) {
+                    hull[v] = null;
+                }
+            }
+
+            // compute answers
+            for (int i = 1; i <= n; i++) {
+                long cost0 = weighted[i] - (long) depth[i] * total[i];
+                long ans = cost0 + bestGain[i];
+                out.print(ans);
+                if (i < n) out.print(' ');
+                else out.println();
+            }
+        }
+        out.flush();
+    }
+}
