@@ -1,0 +1,70 @@
+import java.io.BufferedReader;
+import java.io.IOException;
+import java.io.InputStreamReader;
+import java.io.PrintWriter;
+import java.util.StringTokenizer;
+
+public class Main {
+    public static void main(String[] args) throws IOException {
+        BufferedReader br = new BufferedReader(new InputStreamReader(System.in));
+        PrintWriter pw = new PrintWriter(System.out);
+        int T = Integer.parseInt(br.readLine());
+        while (T-- > 0) {
+            StringTokenizer st = new StringTokenizer(br.readLine());
+            int n = Integer.parseInt(st.nextToken());
+            long h = Long.parseLong(st.nextToken());
+            long k = Long.parseLong(st.nextToken());
+            long[] a = new long[n];
+            st = new StringTokenizer(br.readLine());
+            long total = 0;
+            for (int i = 0; i < n; i++) {
+                a[i] = Long.parseLong(st.nextToken());
+                total += a[i];
+            }
+            long fullCycles = (h - 1) / total;
+            long rem = h - fullCycles * total;
+
+            // prefix sums
+            long[] pref = new long[n + 1];
+            for (int i = 1; i <= n; i++) pref[i] = pref[i - 1] + a[i - 1];
+
+            // minimum in each prefix
+            long[] minPref = new long[n];
+            minPref[0] = a[0];
+            for (int i = 1; i < n; i++) minPref[i] = Math.min(minPref[i - 1], a[i]);
+
+            // maximum in each suffix
+            long[] suffMax = new long[n + 2];
+            suffMax[n + 1] = Long.MIN_VALUE;
+            for (int i = n; i >= 1; i--) {
+                suffMax[i] = Math.max(a[i - 1], suffMax[i + 1]);
+            }
+
+            // binary search the smallest t such that we can reach rem
+            int lo = 1, hi = n, best = n;
+            while (lo <= hi) {
+                int mid = (lo + hi) / 2;
+                if (possible(mid, rem, pref, minPref, suffMax, n)) {
+                    best = mid;
+                    hi = mid - 1;
+                } else {
+                    lo = mid + 1;
+                }
+            }
+
+            long ans = fullCycles * n + fullCycles * k + best;
+            pw.println(ans);
+        }
+        pw.close();
+    }
+
+    // can we make the sum of the first t bullets at least rem by at most one swap?
+    static boolean possible(int t, long rem, long[] pref, long[] minPref, long[] suffMax, int n) {
+        if (pref[t] >= rem) return true;
+        if (t < n) {
+            long newSum = pref[t] - minPref[t - 1] + suffMax[t + 1];
+            if (newSum >= rem) return true;
+        }
+        return false;
+    }
+}
