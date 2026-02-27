@@ -1,0 +1,22 @@
+import java.util.Scanner;
+
+public class Main {
+    public static void main(String[] args) {
+        Scanner sc = new Scanner(System.in);
+        int t = sc.nextInt();
+        while (t-- > 0) {
+            int n = sc.nextInt();
+            String s = sc.next();
+            StringBuilder stack = new StringBuilder();
+            for (int i = 0; i < n; ++i) {
+                char c = s.charAt(i);
+                if (stack.length() > 0 && stack.charAt(stack.length() - 1) == c)
+                    stack.deleteCharAt(stack.length() - 1);
+                else
+                    stack.append(c);
+            }
+            System.out.println(stack.length() == 0 ? "YES" : "NO");
+        }
+        sc.close();
+    }
+}
