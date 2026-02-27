@@ -1,0 +1,151 @@
+import java.io.*;
+import java.util.*;
+
+public class Main {
+    static class BIT {
+        int n;
+        int[] cnt;
+        long[] sum;
+        BIT(int n) {
+            this.n = n;
+            cnt = new int[n + 2];
+            sum = new long[n + 2];
+        }
+        void update(int idx, int dc, long ds) {
+            while (idx <= n) {
+                cnt[idx] += dc;
+                sum[idx] += ds;
+                idx += idx & -idx;
+            }
+        }
+        int prefixCount(int idx) {
+            int res = 0;
+            while (idx > 0) {
+                res += cnt[idx];
+                idx -= idx & -idx;
+            }
+            return res;
+        }
+        long prefixSum(int idx) {
+            long res = 0;
+            while (idx > 0) {
+                res += sum[idx];
+                idx -= idx & -idx;
+            }
+            return res;
+        }
+        // smallest index with prefixCount >= target
+        int findIndex(int target) {
+            int idx = 0;
+            int bit = Integer.highestOneBit(n);
+            while (bit != 0) {
+                int nxt = idx + bit;
+                if (nxt <= n && cnt[nxt] < target) {
+                    target -= cnt[nxt];
+                    idx = nxt;
+                }
+                bit >>= 1;
+            }
+            return idx + 1;
+        }
+    }
+
+    static long getTopK(BIT bit, int totCnt, long totSum, List<Long> vals, int k) {
+        if (k == 0) return 0;
+        int target = totCnt - k + 1;               // need prefixCount >= target
+        int idx = bit.findIndex(target);
+        long leCnt = bit.prefixCount(idx);
+        long leSum = bit.prefixSum(idx);
+        long gtCnt = totCnt - leCnt;
+        long gtSum = totSum - leSum;
+        long need = k - gtCnt;
+        return gtSum + need * vals.get(idx - 1);
+    }
+
+    public static void main(String[] args) throws IOException {
+        BufferedReader br = new BufferedReader(new InputStreamReader(System.in));
+        PrintWriter pw = new PrintWriter(System.out);
+        int t = Integer.parseInt(br.readLine());
+        while (t-- > 0) {
+            String[] nm = br.readLine().split(" ");
+            int n = Integer.parseInt(nm[0]);
+            int m = Integer.parseInt(nm[1]);
+
+            // bucket particles by y
+            ArrayList<Long>[] buckets = new ArrayList[n + 1];
+            for (int i = 0; i <= n; i++) buckets[i] = new ArrayList<>();
+            ArrayList<Long> allX = new ArrayList<>();
+
+            for (int i = 0; i < n; i++) {
+                String[] xy = br.readLine().split(" ");
+                long x = Long.parseLong(xy[0]);
+                int y = Integer.parseInt(xy[1]);
+                allX.add(x);
+                buckets[y].add(x);
+            }
+
+            // coordinate compression
+            Collections.sort(allX);
+            ArrayList<Long> uni = new ArrayList<>();
+            for (long v : allX) {
+                if (uni.isEmpty() || v != uni.get(uni.size() - 1))
+                    uni.add(v);
+            }
+            int L = uni.size();
+            HashMap<Long, Integer> idxMap = new HashMap<>();
+            for (int i = 0; i < L; i++) idxMap.put(uni.get(i), i + 1);
+
+            BIT bit = new BIT(L);
+            int totCnt = 0;
+            long totSum = 0;
+            long[] F = new long[n + 1];
+            long[] H = new long[n + 1];
+            Arrays.fill(F, Long.MIN_VALUE);
+            Arrays.fill(H, Long.MIN_VALUE);
+
+            // process thresholds from high to low
+            for (int th = n; th >= 0; th--) {
+                for (long x : buckets[th]) {
+                    int id = idxMap.get(x);
+                    bit.update(id, 1, x);
+                    totCnt++;
+                    totSum += x;
+                }
+                if (totCnt >= th) {
+                    if (th == 0) F[th] = 0;
+                    else F[th] = getTopK(bit, totCnt, totSum, uni, th);
+                }
+                if (totCnt >= th + 1) {
+                    H[th] = getTopK(bit, totCnt, totSum, uni, th + 1);
+                }
+            }
+
+            // best without shop
+            long bestOrig = 0;
+            for (int th = 0; th <= n; th++) {
+                if (H[th] > bestOrig) bestOrig = H[th];
+            }
+
+            // prefix maximum of F
+            long[] prefF = new long[n + 1];
+            prefF[0] = F[0];
+            for (int i = 1; i <= n; i++) {
+                prefF[i] = Math.max(prefF[i - 1], F[i]);
+            }
+
+            // process shop particles
+            StringBuilder sb = new StringBuilder();
+            for (int i = 0; i < m; i++) {
+                String[] xy = br.readLine().split(" ");
+                long x0 = Long.parseLong(xy[0]);
+                int y0 = Integer.parseInt(xy[1]);
+                long cand = x0 + prefF[y0];
+                long ans = Math.max(bestOrig, cand);
+                sb.append(ans).append(' ');
+            }
+            pw.println(sb.toString().trim());
+        }
+        pw.flush();
+        pw.close();
+    }
+}
