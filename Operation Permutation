@@ -1,0 +1,96 @@
+import java.io.*;
+import java.util.*;
+
+public class Main {
+    static final long MOD = 1_000_000_007L;
+    static final int MAXN = 3000;
+    static long[] fact = new long[MAXN + 1];
+    static long[] invFact = new long[MAXN + 1];
+
+    static {
+        fact[0] = 1;
+        for (int i = 1; i <= MAXN; i++) {
+            fact[i] = fact[i - 1] * i % MOD;
+        }
+        invFact[MAXN] = modPow(fact[MAXN], MOD - 2);
+        for (int i = MAXN; i >= 1; i--) {
+            invFact[i - 1] = invFact[i] * i % MOD;
+        }
+    }
+
+    static long modPow(long a, long e) {
+        long res = 1;
+        a %= MOD;
+        while (e > 0) {
+            if ((e & 1) == 1) res = res * a % MOD;
+            a = a * a % MOD;
+            e >>= 1;
+        }
+        return res;
+    }
+
+    static long modInv(long a) {
+        return modPow(a, MOD - 2);
+    }
+
+    static long comb(int n, int k) {
+        if (k < 0 || k > n) return 0;
+        return fact[n] * invFact[k] % MOD * invFact[n - k] % MOD;
+    }
+
+    public static void main(String[] args) throws IOException {
+        BufferedReader br = new BufferedReader(new InputStreamReader(System.in));
+        int t = Integer.parseInt(br.readLine().trim());
+        StringBuilder sb = new StringBuilder();
+        while (t-- > 0) {
+            String[] nx = br.readLine().split(" ");
+            int n = Integer.parseInt(nx[0]);
+            long x = Long.parseLong(nx[1]) % MOD;
+            String line = br.readLine().trim();
+            String[] ops = line.split("\\s+");
+            List<Long> add = new ArrayList<>();
+            List<Long> mult = new ArrayList<>();
+            for (String op : ops) {
+                if (op.isEmpty()) continue;
+                char first = op.charAt(0);
+                long y = Long.parseLong(op.substring(1));
+                if (first == '+') {
+                    add.add(y % MOD);
+                } else if (first == '-') {
+                    add.add((MOD - (y % MOD)) % MOD);
+                } else if (first == 'x') {
+                    mult.add(y % MOD);
+                } else { // '/'
+                    mult.add(modInv(y % MOD));
+                }
+            }
+            long P = 1;
+            for (long f : mult) P = P * f % MOD;
+            long sumC = 0;
+            for (long c : add) sumC = (sumC + c) % MOD;
+            long ans;
+            int m = mult.size();
+            if (m == 0) {
+                ans = (x * P % MOD + sumC) % MOD;
+            } else {
+                long[] e = new long[m + 1];
+                e[0] = 1;
+                for (long f : mult) {
+                    for (int k = m; k >= 1; k--) {
+                        e[k] = (e[k] + e[k - 1] * f) % MOD;
+                    }
+                }
+                long Q = 0;
+                for (int k = 0; k <= m; k++) {
+                    long binom = comb(m, k);
+                    long term = e[k] * modInv(binom) % MOD;
+                    Q = (Q + term) % MOD;
+                }
+                Q = Q * modInv(m + 1) % MOD;
+                ans = (x * P % MOD + sumC * Q % MOD) % MOD;
+            }
+            sb.append(ans).append("\n");
+        }
+        System.out.print(sb);
+    }
+}
