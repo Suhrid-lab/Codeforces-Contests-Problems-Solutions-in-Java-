@@ -1,0 +1,43 @@
+import java.util.Scanner;
+
+public class Main {
+    public static void main(String[] args) {
+        Scanner sc = new Scanner(System.in);
+        int t = sc.nextInt();
+        while (t-- > 0) {
+            int n = sc.nextInt();
+            String s = sc.next();
+            boolean[] one = new boolean[n];
+            for (int i = 0; i < n; i++) {
+                one[i] = s.charAt(i) == '1';
+            }
+            // closure
+            boolean changed;
+            do {
+                changed = false;
+                for (int i = 1; i < n-1; i++) {
+                    if (!one[i] && one[i-1] && one[i+1]) {
+                        one[i] = true;
+                        changed = true;
+                    }
+                }
+            } while (changed);
+            // compute intervals
+            int totalMin = 0, totalMax = 0;
+            int i = 0;
+            while (i < n) {
+                if (one[i]) {
+                    int j = i;
+                    while (j < n && one[j]) j++;
+                    int len = j - i;
+                    totalMax += len;
+                    totalMin += len - (len-1)/2; // integer division
+                    i = j;
+                } else {
+                    i++;
+                }
+            }
+            System.out.println(totalMin + " " + totalMax);
+        }
+    }
+}
