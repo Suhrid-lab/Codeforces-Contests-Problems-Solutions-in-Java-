@@ -1,0 +1,132 @@
+import java.io.*;
+import java.util.*;
+
+public class Main {
+    public static void main(String[] args) throws IOException {
+        BufferedReader br = new BufferedReader(new InputStreamReader(System.in));
+        int t = Integer.parseInt(br.readLine());
+        PrintWriter pw = new PrintWriter(System.out);
+        while (t-- > 0) {
+            String[] line = br.readLine().split(" ");
+            int n = Integer.parseInt(line[0]);
+            long h = Long.parseLong(line[1]);
+            long[] a = new long[n];
+            line = br.readLine().split(" ");
+            for (int i = 0; i < n; i++) {
+                a[i] = Long.parseLong(line[i]);
+            }
+
+            // M[i][j] = maximum a in the interval between i and j
+            long[][] M = new long[n][n];
+            for (int i = 0; i < n; i++) {
+                M[i][i] = a[i];
+                for (int j = i + 1; j < n; j++) {
+                    M[i][j] = Math.max(M[i][j - 1], a[j]);
+                }
+                for (int j = i - 1; j >= 0; j--) {
+                    M[i][j] = Math.max(M[i][j + 1], a[j]);
+                }
+            }
+
+            // total, left and right sums for each column
+            long[] total = new long[n];
+            long[] left = new long[n];
+            long[] right = new long[n];
+            for (int i = 0; i < n; i++) {
+                long sum = 0;
+                for (int j = 0; j < n; j++) sum += M[i][j];
+                total[i] = sum;
+                long lsum = 0;
+                for (int j = 0; j < i; j++) lsum += M[i][j];
+                left[i] = lsum;
+                long rsum = 0;
+                for (int j = i + 1; j < n; j++) rsum += M[i][j];
+                right[i] = rsum;
+            }
+
+            // prefix sums for each i (from i to n-1)
+            long[][] pref = new long[n][n];
+            for (int i = 0; i < n; i++) {
+                pref[i][i] = M[i][i];
+                for (int j = i + 1; j < n; j++) {
+                    pref[i][j] = pref[i][j - 1] + M[i][j];
+                }
+            }
+
+            // suffix sums for each i (from 0 to i)
+            long[][] suff = new long[n][n];
+            for (int i = 0; i < n; i++) {
+                suff[i][i] = M[i][i];
+                for (int j = i - 1; j >= 0; j--) {
+                    suff[i][j] = suff[i][j + 1] + M[i][j];
+                }
+            }
+
+            // find sinks: local minima considering plateaus
+            List<Integer> sinks = new ArrayList<>();
+            int idx = 0;
+            while (idx < n) {
+                if (a[idx] >= h) { idx++; continue; }
+                int start = idx;
+                long val = a[idx];
+                while (idx + 1 < n && a[idx + 1] == val && a[idx + 1] < h) idx++;
+                int end = idx;
+                boolean leftHigher = (start == 0) || (a[start - 1] > val);
+                boolean rightHigher = (end == n - 1) || (a[end + 1] > val);
+                if (leftHigher && rightHigher) {
+                    for (int k = start; k <= end; k++) sinks.add(k);
+                }
+                idx++;
+            }
+
+            long totalCells = n * h;
+            long ans = 0;
+
+            // single drain
+            for (int i : sinks) {
+                long cur = totalCells - total[i];
+                if (cur > ans) ans = cur;
+            }
+
+            // two drains
+            int m = sinks.size();
+            for (int p = 0; p < m; p++) {
+                for (int q = p + 1; q < m; q++) {
+                    int i = sinks.get(p);
+                    int j = sinks.get(q);
+                    if (i > j) { int tmp = i; i = j; j = tmp; } // ensure i < j
+
+                    long leftPart = left[i];
+                    long rightPart = right[j];
+
+                    // binary search for the split point
+                    int split;
+                    if (M[i][i] > M[j][i]) {
+                        split = i - 1;
+                    } else {
+                        int lo = i, hi = j;
+                        while (lo < hi) {
+                            int mid = (lo + hi + 1) >>> 1;
+                            if (M[i][mid] <= M[j][mid]) {
+                                lo = mid;
+                            } else {
+                                hi = mid - 1;
+                            }
+                        }
+                        split = lo;
+                    }
+
+                    long middle = 0;
+                    if (split >= i) middle += pref[i][split];
+                    if (split + 1 <= j) middle += suff[j][split + 1];
+
+                    long union = totalCells - (leftPart + rightPart + middle);
+                    if (union > ans) ans = union;
+                }
+            }
+
+            pw.println(ans);
+        }
+        pw.flush();
+    }
+}
