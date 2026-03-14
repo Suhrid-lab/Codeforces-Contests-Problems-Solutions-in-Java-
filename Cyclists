@@ -1,0 +1,126 @@
+import java.io.*;
+import java.util.*;
+
+public class Main {
+    static class Node implements Comparable<Node> {
+        int id, cost;
+        Node prev, next;
+        Node(int id, int cost) {
+            this.id = id;
+            this.cost = cost;
+        }
+        public int compareTo(Node o) {
+            if (cost != o.cost) return cost - o.cost;
+            return id - o.id;
+        }
+    }
+
+    static boolean canPlay(int t, int n, int k, int targetId, int[] a, int m) {
+        // build linked list
+        Node[] nodes = new Node[n];
+        for (int i = 0; i < n; i++) nodes[i] = new Node(i, a[i]);
+        for (int i = 0; i < n-1; i++) {
+            nodes[i].next = nodes[i+1];
+            nodes[i+1].prev = nodes[i];
+        }
+        Node head = nodes[0];
+        Node tail = nodes[n-1];
+        Node target = nodes[targetId];
+
+        TreeSet<Node> window = new TreeSet<>();
+        Node windowEnd = null;
+        if (k == n) {
+            // whole deck is the window
+            for (Node node : nodes) window.add(node);
+        } else {
+            windowEnd = head;
+            for (int i = 1; i < k; i++) windowEnd = windowEnd.next;
+            Node cur = head;
+            while (true) {
+                window.add(cur);
+                if (cur == windowEnd) break;
+                cur = cur.next;
+            }
+        }
+
+        int energy = 0;
+        int played = 0;
+        while (played < t) {
+            Node play;
+            boolean isTarget = false;
+            if (window.contains(target)) {
+                play = target;
+                isTarget = true;
+            } else {
+                play = window.first();
+            }
+            energy += play.cost;
+            if (energy > m) return false;
+
+            // remove play from list
+            Node prev = play.prev;
+            Node next = play.next;
+            if (prev != null) prev.next = next;
+            else head = next;
+            if (next != null) next.prev = prev;
+            else tail = prev;
+
+            // remove from window
+            window.remove(play);
+
+            // update window if k < n
+            if (k < n) {
+                Node newEnd;
+                if (play == windowEnd) {
+                    newEnd = play.next; // we still have next from before removal
+                } else {
+                    newEnd = windowEnd.next;
+                }
+                if (newEnd != null) window.add(newEnd);
+                windowEnd = newEnd;
+            }
+
+            // append play to end
+            play.prev = tail;
+            play.next = null;
+            if (tail != null) tail.next = play;
+            else head = play;
+            tail = play;
+
+            // if k == n, the played card is back in the window
+            if (k == n) window.add(play);
+
+            if (isTarget) played++;
+        }
+        return true;
+    }
+
+    public static void main(String[] args) throws IOException {
+        BufferedReader br = new BufferedReader(new InputStreamReader(System.in));
+        int t = Integer.parseInt(br.readLine());
+        StringBuilder sb = new StringBuilder();
+        while (t-- > 0) {
+            StringTokenizer st = new StringTokenizer(br.readLine());
+            int n = Integer.parseInt(st.nextToken());
+            int k = Integer.parseInt(st.nextToken());
+            int p = Integer.parseInt(st.nextToken());
+            int m = Integer.parseInt(st.nextToken());
+            int[] a = new int[n];
+            st = new StringTokenizer(br.readLine());
+            for (int i = 0; i < n; i++) a[i] = Integer.parseInt(st.nextToken());
+            int targetId = p - 1;
+            int targetCost = a[targetId];
+            int low = 0, high = m / targetCost;
+            while (low < high) {
+                int mid = (low + high + 1) / 2;
+                if (canPlay(mid, n, k, targetId, a, m)) {
+                    low = mid;
+                } else {
+                    high = mid - 1;
+                }
+            }
+            sb.append(low).append('\n');
+        }
+        System.out.print(sb);
+    }
+}
