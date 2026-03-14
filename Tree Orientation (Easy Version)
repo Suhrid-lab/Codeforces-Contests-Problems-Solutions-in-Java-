@@ -1,0 +1,124 @@
+import java.io.*;
+import java.util.*;
+
+public class Main {
+    public static void main(String[] args) throws IOException {
+        BufferedReader br = new BufferedReader(new InputStreamReader(System.in));
+        PrintWriter pw = new PrintWriter(System.out);
+        int t = Integer.parseInt(br.readLine());
+        while (t-- > 0) {
+            int n = Integer.parseInt(br.readLine());
+            String[] rows = new String[n];
+            for (int i = 0; i < n; i++) {
+                rows[i] = br.readLine();
+            }
+            boolean[][] R = new boolean[n][n];
+            boolean ok = true;
+
+            // read matrix and check diagonal
+            for (int i = 0; i < n; i++) {
+                String s = rows[i];
+                for (int j = 0; j < n; j++) {
+                    R[i][j] = s.charAt(j) == '1';
+                }
+                if (!R[i][i]) ok = false;
+            }
+            if (!ok) {
+                pw.println("No");
+                continue;
+            }
+
+            // antisymmetry
+            for (int i = 0; i < n; i++) {
+                for (int j = i + 1; j < n; j++) {
+                    if (R[i][j] && R[j][i]) {
+                        ok = false;
+                        break;
+                    }
+                }
+                if (!ok) break;
+            }
+            if (!ok) {
+                pw.println("No");
+                continue;
+            }
+
+            // transitivity
+            for (int k = 0; k < n; k++) {
+                for (int i = 0; i < n; i++) {
+                    if (R[i][k]) {
+                        for (int j = 0; j < n; j++) {
+                            if (R[k][j] && !R[i][j]) {
+                                ok = false;
+                                break;
+                            }
+                        }
+                    }
+                    if (!ok) break;
+                }
+                if (!ok) break;
+            }
+            if (!ok) {
+                pw.println("No");
+                continue;
+            }
+
+            // transitive reduction
+            List<int[]> edges = new ArrayList<>();
+            for (int i = 0; i < n; i++) {
+                for (int j = 0; j < n; j++) {
+                    if (i != j && R[i][j]) {
+                        boolean direct = true;
+                        for (int k = 0; k < n; k++) {
+                            if (k != i && k != j && R[i][k] && R[k][j]) {
+                                direct = false;
+                                break;
+                            }
+                        }
+                        if (direct) {
+                            edges.add(new int[]{i + 1, j + 1});
+                        }
+                    }
+                }
+            }
+            if (edges.size() != n - 1) {
+                pw.println("No");
+                continue;
+            }
+
+            // connectivity of the underlying undirected graph
+            List<Integer>[] adj = new ArrayList[n];
+            for (int i = 0; i < n; i++) adj[i] = new ArrayList<>();
+            for (int[] e : edges) {
+                int u = e[0] - 1, v = e[1] - 1;
+                adj[u].add(v);
+                adj[v].add(u);
+            }
+            boolean[] vis = new boolean[n];
+            Deque<Integer> stack = new ArrayDeque<>();
+            stack.push(0);
+            vis[0] = true;
+            int cnt = 1;
+            while (!stack.isEmpty()) {
+                int u = stack.pop();
+                for (int v : adj[u]) {
+                    if (!vis[v]) {
+                        vis[v] = true;
+                        cnt++;
+                        stack.push(v);
+                    }
+                }
+            }
+            if (cnt != n) {
+                pw.println("No");
+                continue;
+            }
+
+            pw.println("Yes");
+            for (int[] e : edges) {
+                pw.println(e[0] + " " + e[1]);
+            }
+        }
+        pw.flush();
+    }
+}
