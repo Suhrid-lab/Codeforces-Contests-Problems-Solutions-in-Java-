@@ -1,0 +1,87 @@
+import java.io.*;
+import java.util.*;
+
+public class Main {
+    static final long MOD = 676767677L;
+    static final int MAX = 3_000_000; // enough for m + 2n
+    static long[] fact = new long[MAX + 1];
+    static long[] invfact = new long[MAX + 1];
+
+    static long pow(long a, long e) {
+        long res = 1;
+        while (e > 0) {
+            if ((e & 1) == 1) res = res * a % MOD;
+            a = a * a % MOD;
+            e >>= 1;
+        }
+        return res;
+    }
+
+    static void precompute() {
+        fact[0] = 1;
+        for (int i = 1; i <= MAX; i++) {
+            fact[i] = fact[i - 1] * i % MOD;
+        }
+        invfact[MAX] = pow(fact[MAX], MOD - 2);
+        for (int i = MAX - 1; i >= 0; i--) {
+            invfact[i] = invfact[i + 1] * (i + 1) % MOD;
+        }
+    }
+
+    static long C(int n, int k) {
+        if (k < 0 || k > n) return 0;
+        return fact[n] * invfact[k] % MOD * invfact[n - k] % MOD;
+    }
+
+    static void build(int l, int r, int d, int leftmost_right, int rightmost_left,
+                      int[] depth, int[] Lmax, int[] Rmin) {
+        if (l > r) return;
+        int mid = (l + r) >>> 1;
+        depth[mid] = d;
+        Lmax[mid] = leftmost_right;
+        Rmin[mid] = rightmost_left;
+        build(l, mid - 1, d + 1, leftmost_right, Math.min(rightmost_left, mid),
+              depth, Lmax, Rmin);
+        build(mid + 1, r, d + 1, Math.max(leftmost_right, mid), rightmost_left,
+              depth, Lmax, Rmin);
+    }
+
+    public static void main(String[] args) throws IOException {
+        BufferedReader br = new BufferedReader(new InputStreamReader(System.in));
+        int t = Integer.parseInt(br.readLine());
+        precompute();
+        StringBuilder sb = new StringBuilder();
+        while (t-- > 0) {
+            String[] parts = br.readLine().split(" ");
+            int n = Integer.parseInt(parts[0]);
+            int m = Integer.parseInt(parts[1]);
+            int[] depth = new int[n + 1];
+            int[] Lmax = new int[n + 1];
+            int[] Rmin = new int[n + 1];
+            build(1, n, 1, 0, n + 1, depth, Lmax, Rmin);
+            long term0 = C(m + n - 1, n);
+            long total = 0;
+            for (int i = 1; i <= n; i++) {
+                long term = term0;
+                if (Rmin[i] <= n) {
+                    int top = m + i + n - Rmin[i] - 1;
+                    int bot = i + n - Rmin[i];
+                    term = (term - C(top, bot) + MOD) % MOD;
+                }
+                if (Lmax[i] > 0) {
+                    int top = m + Lmax[i] + n - i - 1;
+                    int bot = Lmax[i] + n - i;
+                    term = (term - C(top, bot) + MOD) % MOD;
+                }
+                if (Lmax[i] > 0 && Rmin[i] <= n) {
+                    int top = m + Lmax[i] + n - Rmin[i] - 1;
+                    int bot = Lmax[i] + n - Rmin[i];
+                    term = (term + C(top, bot)) % MOD;
+                }
+                total = (total + depth[i] * term) % MOD;
+            }
+            sb.append(total).append('\n');
+        }
+        System.out.print(sb);
+    }
+}
