@@ -1,0 +1,111 @@
+import java.io.*;
+import java.util.*;
+
+public class Main {
+    static class DSU {
+        int[] parent, size, forced;
+        boolean conflict;
+
+        DSU(int n) {
+            parent = new int[n + 1];
+            size = new int[n + 1];
+            forced = new int[n + 1];
+            for (int i = 1; i <= n; i++) {
+                parent[i] = i;
+                size[i] = 1;
+                forced[i] = -1;
+            }
+            conflict = false;
+        }
+
+        int find(int x) {
+            if (parent[x] != x) parent[x] = find(parent[x]);
+            return parent[x];
+        }
+
+        void union(int x, int y) {
+            int rx = find(x), ry = find(y);
+            if (rx == ry) return;
+            if (size[rx] < size[ry]) {
+                int t = rx; rx = ry; ry = t;
+            }
+            parent[ry] = rx;
+            size[rx] += size[ry];
+            // merge forced values
+            if (forced[rx] != -1 && forced[ry] != -1 && forced[rx] != forced[ry]) {
+                conflict = true;
+            } else if (forced[ry] != -1) {
+                forced[rx] = forced[ry];
+            }
+        }
+
+        void assign(int x, int val) {
+            int r = find(x);
+            if (forced[r] == -1) forced[r] = val;
+            else if (forced[r] != val) conflict = true;
+        }
+    }
+
+    public static void main(String[] args) throws IOException {
+        BufferedReader br = new BufferedReader(new InputStreamReader(System.in));
+        PrintWriter pw = new PrintWriter(System.out);
+        int t = Integer.parseInt(br.readLine());
+        while (t-- > 0) {
+            String[] nk = br.readLine().split(" ");
+            int n = Integer.parseInt(nk[0]);
+            int k = Integer.parseInt(nk[1]);
+            int[] a = new int[n + 1];
+            int[] b = new int[n + 1];
+            StringTokenizer st = new StringTokenizer(br.readLine());
+            for (int i = 1; i <= n; i++) a[i] = Integer.parseInt(st.nextToken());
+            st = new StringTokenizer(br.readLine());
+            for (int i = 1; i <= n; i++) b[i] = Integer.parseInt(st.nextToken());
+
+            DSU dsu = new DSU(n);
+            // fixed values from original b
+            for (int i = 1; i <= n; i++) {
+                if (b[i] != -1) dsu.assign(i, b[i]);
+            }
+            // equality edges (a[l] == a[r])
+            for (int i = k; i <= n - 1; i++) {
+                int l = i - k + 1;
+                int r = i + 1;
+                if (a[l] == a[r]) dsu.union(l, r);
+            }
+            // forced edges (a[l] != a[r])
+            for (int i = k; i <= n - 1; i++) {
+                int l = i - k + 1;
+                int r = i + 1;
+                if (a[l] != a[r]) {
+                    if (dsu.find(l) == dsu.find(r)) dsu.conflict = true;
+                    dsu.assign(l, a[l]);
+                    dsu.assign(r, a[r]);
+                }
+            }
+
+            // first window multiset
+            int[] cnt = new int[n + 1];
+            for (int i = 1; i <= k; i++) cnt[a[i]]++;
+            int freeFirst = 0;
+            for (int r = 1; r <= k; r++) {
+                int root = dsu.find(r);
+                if (dsu.forced[root] != -1) {
+                    int val = dsu.forced[root];
+                    cnt[val]--;
+                    if (cnt[val] < 0) dsu.conflict = true;
+                } else {
+                    freeFirst++;
+                }
+            }
+            int sumRemaining = 0;
+            for (int x = 1; x <= n; x++) {
+                if (cnt[x] < 0) dsu.conflict = true;
+                sumRemaining += cnt[x];
+            }
+            if (sumRemaining != freeFirst) dsu.conflict = true;
+
+            pw.println(dsu.conflict ? "NO" : "YES");
+        }
+        pw.close();
+    }
+}
