@@ -1,0 +1,107 @@
+import java.io.*;
+import java.util.*;
+
+public class Main {
+    public static void main(String[] args) throws IOException {
+        BufferedReader br = new BufferedReader(new InputStreamReader(System.in));
+        int t = Integer.parseInt(br.readLine());
+        StringBuilder sb = new StringBuilder();
+        while (t-- > 0) {
+            String[] parts = br.readLine().split(" ");
+            int n = Integer.parseInt(parts[0]);
+            int k = Integer.parseInt(parts[1]);
+
+            int[] a = new int[n + 1];
+            int[] b = new int[n + 1];
+            parts = br.readLine().split(" ");
+            for (int i = 1; i <= n; i++) {
+                a[i] = Integer.parseInt(parts[i - 1]);
+            }
+            parts = br.readLine().split(" ");
+            for (int i = 1; i <= n; i++) {
+                b[i] = Integer.parseInt(parts[i - 1]);
+            }
+
+            if (k == n) {
+                // whole array must be a permutation of a
+                boolean[] seen = new boolean[n + 1];
+                int minus = 0;
+                boolean ok = true;
+                for (int i = 1; i <= n; i++) {
+                    if (b[i] == -1) {
+                        minus++;
+                    } else {
+                        if (seen[b[i]]) {
+                            ok = false;
+                            break;
+                        }
+                        seen[b[i]] = true;
+                    }
+                }
+                if (!ok) {
+                    sb.append("NO\n");
+                    continue;
+                }
+                int missing = 0;
+                for (int i = 1; i <= n; i++) {
+                    if (!seen[i]) missing++;
+                }
+                sb.append(minus == missing ? "YES\n" : "NO\n");
+                continue;
+            }
+
+            // k < n
+            boolean[] inA = new boolean[n + 1];
+            for (int i = 1; i <= k; i++) {
+                inA[a[i]] = true;
+            }
+            boolean[] forced = new boolean[n + 1];
+            boolean[] fixed = new boolean[n + 1];
+            int freeCount = 0;
+            boolean possible = true;
+
+            for (int r = 1; r <= k; r++) {
+                int m = 1 + (n - r) / k;   // number of elements in this residue class
+                if (m == 1) {
+                    int val = b[r];
+                    if (val != -1) {
+                        if (!inA[val] || forced[val] || fixed[val]) {
+                            possible = false;
+                            break;
+                        }
+                        fixed[val] = true;
+                    } else {
+                        freeCount++;
+                    }
+                } else {
+                    // chain length >=2, must be identity
+                    for (int idx = r; idx <= n; idx += k) {
+                        if (b[idx] != -1 && b[idx] != a[idx]) {
+                            possible = false;
+                            break;
+                        }
+                    }
+                    if (!possible) break;
+                    int val = a[r];
+                    if (!inA[val] || forced[val] || fixed[val]) {
+                        possible = false;
+                        break;
+                    }
+                    forced[val] = true;
+                }
+            }
+            if (!possible) {
+                sb.append("NO\n");
+                continue;
+            }
+
+            int used = 0;
+            for (int i = 1; i <= n; i++) {
+                if (forced[i]) used++;
+                if (fixed[i]) used++;
+            }
+            sb.append(freeCount == k - used ? "YES\n" : "NO\n");
+        }
+        System.out.print(sb);
+    }
+}
