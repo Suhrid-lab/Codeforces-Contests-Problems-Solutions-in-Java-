@@ -1,0 +1,54 @@
+import java.io.BufferedReader;
+import java.io.IOException;
+import java.io.InputStreamReader;
+
+public class Main {
+    private static final int MOD = 676767677;
+    private static final int MAX = 200000;
+    private static final int[] DIV_COUNT = new int[MAX + 1];
+
+    static {
+        // Precompute number of divisors for all numbers up to MAX
+        for (int i = 1; i <= MAX; ++i) {
+            for (int j = i; j <= MAX; j += i) {
+                DIV_COUNT[j]++;
+            }
+        }
+    }
+
+    public static void main(String[] args) throws IOException {
+        BufferedReader br = new BufferedReader(new InputStreamReader(System.in));
+        int t = Integer.parseInt(br.readLine());
+        StringBuilder out = new StringBuilder();
+
+        for (int testCase = 0; testCase < t; ++testCase) {
+            String[] parts = br.readLine().split(" ");
+            int x = Integer.parseInt(parts[0]);
+            int y = Integer.parseInt(parts[1]);
+            int diff = Math.abs(x - y);
+
+            // Compute minimal f(a)
+            long ans;
+            if (diff == 0) {
+                ans = 1;
+            } else {
+                ans = DIV_COUNT[diff] % MOD;
+            }
+            out.append(ans).append('\n');
+
+            // Construct the array: all ones first (if x >= y) or all minus ones first
+            if (x >= y) {
+                for (int i = 0; i < x; ++i) out.append("1 ");
+                for (int i = 0; i < y; ++i) out.append("-1 ");
+            } else {
+                for (int i = 0; i < y; ++i) out.append("-1 ");
+                for (int i = 0; i < x; ++i) out.append("1 ");
+            }
+            // Remove trailing space and add newline
+            out.setLength(out.length() - 1);
+            out.append('\n');
+        }
+
+        System.out.print(out);
+    }
+}
